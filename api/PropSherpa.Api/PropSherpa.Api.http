@@ -1,0 +1,6 @@
+@PropSherpa.Api_HostAddress = http://localhost:5114
+
+GET {{PropSherpa.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
