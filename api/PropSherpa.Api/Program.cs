@@ -1,6 +1,8 @@
 using Microsoft.Extensions.Options;
+using PropSherpa.Api.Features.Lineups;
 using PropSherpa.Api.Features.Odds;
 using PropSherpa.Api.Features.Props;
+using PropSherpa.Api.Integrations.Sleeper;
 using PropSherpa.Api.Integrations.SportsGameOdds;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,8 +23,22 @@ builder.Services.AddHttpClient<ISportsGameOddsClient, SportsGameOddsClient>((sp,
     }
 });
 
+builder.Services.Configure<SleeperOptions>(configuration.GetSection("Sleeper"));
+
+builder.Services.AddHttpClient<ISleeperClient, SleeperClient>((sp, client) =>
+{
+    var opts = sp.GetRequiredService<IOptions<SleeperOptions>>().Value;
+
+    client.BaseAddress = new Uri(opts.BaseUrl);
+
+    // The player directory is ~15 MB, which the default 100 seconds can be tight for.
+    client.Timeout = TimeSpan.FromMinutes(2);
+});
+
 builder.Services.AddSingleton<PositionCatalog>();
 builder.Services.AddSingleton<PropCache>();
+builder.Services.AddSingleton<SleeperPlayerDirectory>();
+builder.Services.AddSingleton<SleeperLeagueCache>();
 
 builder.Services.AddCors(options =>
 {
@@ -45,5 +61,6 @@ app.UseCors("web");
 
 app.MapOddsEndpoints();
 app.MapPropsEndpoints();
+app.MapLineupsEndpoints();
 
 app.Run();
