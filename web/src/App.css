@@ -43,7 +43,168 @@ body {
   font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
+/* Shell -------------------------------------------------------------------- */
+/*
+ * The nav is fixed furniture, not a layout column.
+ *
+ * A grid column made the nav cost content width: opening or collapsing it reflowed the whole
+ * page. But the page is centred with a max width, so on a wide screen there is already empty
+ * margin either side - the nav goes there. Content keeps its own position, and the nav is simply
+ * present, which is why it needs no collapse control.
+ *
+ * `--nav-w` is the one number three rules depend on: the nav's own width, the gutter content
+ * reserves for it, and the drawer width below the breakpoint.
+ */
+.shell {
+  --nav-w: 232px;
+  /* One duration for every part of the nav, so the drawer and its scrim arrive together. */
+  --nav-ease: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+
+  min-height: 100vh;
+}
+
+.shell-main {
+  position: relative;
+  /* The gutter the fixed nav occupies. Padding rather than margin so the centred `.app` inside
+     still centres within what is left, instead of against the viewport edge. */
+  padding-left: var(--nav-w);
+  min-width: 0;
+}
+
+/*
+ * The page keeps its own max width and centring. With the nav in the margin rather than in the
+ * flow, this is unchanged from before navigation existed - which is the point.
+ */
 .app { max-width: 1600px; margin: 0 auto; padding: 24px 20px 64px; }
+
+/* Navigation --------------------------------------------------------------- */
+/*
+ * Fixed to the viewport, so it neither scrolls away on a long page nor occupies layout space.
+ * Taken out of the flow entirely, which is what lets content ignore it.
+ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 20;
+  width: var(--nav-w);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 12px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+}
+
+.nav-head {
+  display: flex;
+  align-items: center;
+  padding: 6px 4px 16px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+/*
+ * The brand mark, which is also the way home. A block so the whole area is clickable rather than
+ * just the pixels of the image.
+ */
+.nav-brand {
+  display: block;
+  border-radius: 6px;
+  /* The logo's own artwork is the only thing that should read here, so the link contributes no
+     colour, underline or focus ring of its own beyond the keyboard outline below. */
+  text-decoration: none;
+}
+
+.nav-brand:focus-visible {
+  outline: 1px solid var(--muted);
+  outline-offset: 3px;
+}
+
+/*
+ * Sized by width, with height following the aspect ratio, so replacing the file with a different
+ * export cannot stretch it. The logo is a wide lockup, so width is the dimension that matters.
+ *
+ * It is a light mark on a dark surface with its own transparent padding; no background or filter
+ * is applied, since the artwork already carries the glow it needs.
+ */
+.nav-logo {
+  display: block;
+  width: 100%;
+  max-width: 196px;
+  height: auto;
+  /* Keeps a too-tall export from pushing the nav items down the column. */
+  max-height: 56px;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 13px;
+  white-space: nowrap;
+  transition: color 0.12s, background 0.12s, transform 0.08s;
+}
+
+/*
+ * Hover has to differ from the selected state, not match it. Both were `--surface-2`, so pointing
+ * at the page you are already on did nothing - with a single nav item, that is every hover, and
+ * the menu reads as dead. A translucent white lifts whatever is beneath it, so it also reads on
+ * top of the selected item rather than being cancelled by it.
+ */
+.nav-item:hover { background: rgba(255, 255, 255, 0.06); color: var(--text); }
+
+/*
+ * The current page. Marked with luminance and a left edge rather than the accent colour: green on
+ * this app means "this is the better start", and a nav item is a location, not a finding.
+ */
+.nav-item.active {
+  background: var(--surface-2);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 2px 0 0 var(--text);
+}
+
+/* Selected and hovered: brighter than either alone, so the feedback survives on the active row. */
+.nav-item.active:hover { background: #262b36; }
+
+/* Confirms the click on the page you are already on, where navigation itself has nothing to
+   show. Without it a click on the current item looks like a failure. */
+.nav-item:active { transform: scale(0.98); }
+
+.nav-item:focus-visible {
+  outline: 1px solid var(--muted);
+  outline-offset: 1px;
+}
+
+.nav-label { overflow: hidden; }
+
+/*
+ * Hidden wherever the nav can toggle itself. It exists only for the closed drawer, which takes
+ * its own button off-screen with it.
+ */
+.nav-trigger { display: none; }
+
+.shell-main { position: relative; }
+
+.nav-scrim { display: none; }
 
 .header {
   display: flex;
@@ -80,6 +241,8 @@ button:disabled { opacity: 0.5; cursor: default; }
   align-items: start;
 }
 
+/* Shared with the nav breakpoint below: the width at which two panels stop fitting side by side
+   is also the width at which the page runs out of margin to park the nav in. */
 @media (max-width: 1100px) {
   .split { grid-template-columns: 1fr; }
 }
@@ -832,4 +995,89 @@ button:disabled { opacity: 0.5; cursor: default; }
   .verdict { grid-template-columns: 1fr; justify-items: start; gap: 12px; }
   .verdict .scoring { justify-self: start; }
   .balance { max-width: none; }
+}
+
+/*
+ * Below this width a 232px column takes too much of the screen, so the nav stops being a column
+ * and becomes an overlay. Kept in step with DRAWER_QUERY in App.tsx, which decides what the
+ * trigger does; if these two disagree the button toggles a nav that is not on screen.
+ */
+/*
+ * Below this width the centred page has no spare margin left, so a nav sitting in it would start
+ * eating content. It becomes an overlay drawer instead.
+ *
+ * Kept in step with DRAWER_QUERY in App.tsx, which decides whether the trigger and the Escape key
+ * have anything to act on; if the two disagree the button toggles a nav that is already visible.
+ */
+@media (max-width: 1100px) {
+  /* Content reclaims the gutter, since nothing is parked in it any more. */
+  .shell-main { padding-left: 0; }
+
+  .nav {
+    z-index: 40;
+    width: min(var(--nav-w), 82vw);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.45);
+    /* Parked off-screen rather than hidden, so opening and closing can animate and the items stay
+       focusable in the DOM order people expect. */
+    transform: translateX(-100%);
+    transition: transform var(--nav-ease);
+  }
+
+  .nav[data-open] { transform: translateX(0); }
+
+  /* The only way back to a closed drawer, so it exists only here. */
+  .nav-trigger {
+    position: absolute;
+    top: 20px;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    opacity: 1;
+    transition: opacity 140ms ease;
+  }
+
+  .nav-trigger:hover { background: var(--surface-2); }
+  .nav-trigger:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+
+  /* Steps aside once the drawer it opened is on screen. */
+  .shell:has(.nav[data-open]) .nav-trigger { opacity: 0; pointer-events: none; }
+
+  /* The heading clears the floating trigger rather than sitting under it. */
+  .header { padding-left: 46px; }
+
+  .nav-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    background: rgba(0, 0, 0, 0.6);
+    /* Fades in with the drawer's slide, so the page dims as the panel arrives rather than the
+       lights going out first. */
+    animation: nav-scrim-in 180ms ease;
+  }
+
+  @keyframes nav-scrim-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .app { padding-top: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav,
+  .nav-item,
+  .nav-trigger { transition: none; }
+
+  .nav-scrim { animation: none; }
+  .nav-item:active { transform: none; }
 }

@@ -19,6 +19,12 @@ export {
   IconTrendingDown as MovementDownIcon,
   // Clearing a player slot.
   IconX as RemoveIcon,
+
+  // Navigation.
+  IconArrowsLeftRight as CompareNavIcon,
+  // One icon for showing and hiding the nav, rather than a pair that swaps: the button is in a
+  // fixed spot and its meaning is "navigation", so a changing glyph reads as a different control.
+  IconMenu2 as MenuIcon,
 } from '@tabler/icons-react';
 
 /**
@@ -41,4 +47,6 @@ export const ICON_SIZE = {
   inline: 12,
   /** In a button or control alongside 12-13px text. */
   control: 14,
+  /** Navigation items, which carry more weight than an inline control. */
+  nav: 18,
 } as const;

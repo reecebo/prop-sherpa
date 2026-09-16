@@ -2,8 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- The mountain mark alone, cropped tight to the artwork: the full lockup is unreadable at
+         16px, and transparent padding around the mark shrinks it further at a size that has none
+         to spare. 32px for the tab, 180px for iOS home screens and bookmark tiles. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Matches --bg, so mobile browser chrome does not frame the dark app in white. -->
+    <meta name="theme-color" content="#0f1115" />
     <title>PropSherpa</title>
   </head>
   <body>
