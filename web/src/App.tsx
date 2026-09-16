@@ -196,9 +196,9 @@ export default function App() {
             start call is only made when the gap outruns it.
           </p>
           <p>
-            <strong className="legend-win">▲ Better start</strong> — compares the de-vigged
-            projection: more yards or receptions, or a higher chance to score. This is the
-            start/sit signal.
+            <strong className="legend-win">▲ Better start</strong> — compares the projection with
+            the books' built-in margin removed: more yards or receptions, or a higher chance to
+            score. This is the start/sit signal.
           </p>
           <p>
             <strong className="legend-bet">Outlined price</strong> — the longest payout among
@@ -209,7 +209,7 @@ export default function App() {
             <strong className="legend-move">↗ ↘ Movement</strong> — how far the anytime-TD price
             has moved since it opened, in points of probability. Only shown on touchdown markets:
             the provider publishes an opening price but no opening line, so on yardage markets a
-            price change reflects vig, not a change of opinion.
+            price change usually reflects the book adjusting its margin, not its opinion.
           </p>
         </div>
       )}

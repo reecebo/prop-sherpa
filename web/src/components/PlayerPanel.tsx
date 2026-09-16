@@ -89,7 +89,7 @@ export function PlayerPanel({ player, books, edges, side, scoring, wins, onRemov
             <tr>
               <th className="market-col">Market</th>
               <th className="fair-col">
-                <Tooltip content="De-vigged consensus. This is what start/sit decisions compare on.">
+                <Tooltip content="The market's true estimate, with the books' built-in profit margin stripped out. This is what start/sit decisions compare on.">
                   Projection
                 </Tooltip>
               </th>
@@ -170,12 +170,12 @@ export function PlayerPanel({ player, books, edges, side, scoring, wins, onRemov
                             <span className="likelihood-fill" style={{ width: `${Math.min(100, value * 100)}%` }} />
                           </span>
                         )}
-                        {/* The 2+ markets have no de-vigged consensus, so their number still
+                        {/* The 2+ markets have no fair-odds consensus, so their number still
                             carries book margin and reads slightly high. Inline, because a block
                             here made only some rows taller and broke alignment across panels. */}
                         {isBookDerived(line) && (
-                          <Tooltip content="Median book price — no de-vigged consensus is published for this market, so it includes the book's margin.">
-                            <span className="vig-flag">+vig</span>
+                          <Tooltip content="Taken from the median book price. No margin-free number is published for this market, so this reads slightly high — treat it as a ceiling.">
+                            <span className="vig-flag">reads high</span>
                           </Tooltip>
                         )}
                       </>

@@ -12,6 +12,12 @@
   --danger: #f87171;
   --danger-bg: #2a1517;
   --danger-border: #5c2326;
+
+  /*
+   * Tells the browser the app is dark, so it paints its own chrome to match: scrollbars, form
+   * controls and focus rings. Without it macOS renders a light scrollbar over the dark table.
+   */
+  color-scheme: dark;
 }
 
 * { box-sizing: border-box; }
@@ -182,31 +188,50 @@ button:disabled { opacity: 0.5; cursor: default; }
 .panel-meta { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
 
 /*
- * Clearing a slot is rare, reversible, and the least important thing in the header, so it is a
- * quiet icon that only colours on hover. As a red button it competed with the projection.
+ * A filled circle rather than a bare glyph. Hover-to-reveal kept it out of the way but made it
+ * undiscoverable and unusable on touch; a soft disc reads as a real target at rest while still
+ * sitting well below the projection in the header's order.
  */
 .remove {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: none;
+  background: var(--surface-2);
   border: none;
-  border-radius: 6px;
-  color: var(--border);
-  font-size: 18px;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 14px;
   line-height: 1;
+  cursor: pointer;
   transition: color 0.12s, background 0.12s;
 }
-.panel:hover .remove { color: var(--muted); }
 .remove:hover:not(:disabled) { background: var(--danger-bg); color: var(--danger); }
-.remove:focus-visible { color: var(--danger); outline: 1px solid var(--danger-border); }
+.remove:focus-visible {
+  color: var(--danger);
+  outline: 1px solid var(--danger-border);
+  outline-offset: 2px;
+}
 
 /* Props table: books as columns, markets as rows. */
 .table-wrap { overflow-x: auto; }
+
+/*
+ * The table scrolls horizontally all the time, so its scrollbar is part of the card rather than
+ * an overlay on it. Slimmer and tinted to the surface it sits on; `color-scheme` above already
+ * handles Firefox and any browser that ignores these.
+ */
+.table-wrap::-webkit-scrollbar { height: 10px; }
+.table-wrap::-webkit-scrollbar-track { background: transparent; }
+.table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 2px solid var(--surface);
+  border-radius: 5px;
+}
+.table-wrap::-webkit-scrollbar-thumb:hover { background: #3a4150; }
 
 .props {
   /*
@@ -424,12 +449,17 @@ button:disabled { opacity: 0.5; cursor: default; }
  * The app's single answer, so it sits above the evidence and is the largest thing on screen.
  */
 .verdict {
-  display: flex;
-  justify-content: space-between;
+  /*
+   * Three columns with equal outer tracks, so the bar is centred on the panel rather than in
+   * whatever space the call happens to leave. Under flex the call absorbed the slack and pushed
+   * the bar right, which put its midpoint nowhere near the middle of the row.
+   */
+  display: grid;
+  /* The middle track is sized, not `auto`: under `auto` it shrank to the bar's content width and
+     the cap below never came into play, leaving a bar too small to read. */
+  grid-template-columns: 1fr minmax(320px, 460px) 1fr;
   align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-  /* The call is the only thing here now, so the bar is sized to a sentence, not a scoreboard. */
+  gap: 24px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-left: 3px solid var(--accent);
@@ -441,10 +471,16 @@ button:disabled { opacity: 0.5; cursor: default; }
 /* A coin flip must not look like a recommendation. */
 .verdict[data-toss-up] { border-left-color: var(--muted); }
 
+/* The idle states have no bar, so their row is just the hint and the picker. */
+.verdict-idle { grid-template-columns: 1fr auto; }
 .verdict-idle { border-left-color: var(--border); }
+
+/* Lets the call wrap as a unit when the row runs out of room. */
+.verdict-call { min-width: 0; }
+/* The picker is the third track; it sits against the right edge so the grid stays symmetric. */
+.verdict .scoring { justify-self: end; }
 .verdict-hint { margin: 0; color: var(--muted); font-size: 13px; }
 
-.verdict-call { min-width: 0; }
 .verdict-line { margin: 0; font-size: 16px; }
 
 /* The reason a call is close belongs under it, not inside the headline. */
@@ -466,18 +502,43 @@ button:disabled { opacity: 0.5; cursor: default; }
 .verdict-caveat { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
 
 
-/* Scoring format: changes the ordering, so it stays visible rather than hidden in a menu. */
-.scoring { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+/*
+ * Scoring format: changes the ordering, so it stays visible rather than hidden in a menu.
+ *
+ * Deliberately colourless. Green on this page means "this is the better start" - the winning
+ * card, the edge badges, the likelihood bars. A mode switch is not a finding, so it marks its
+ * selection with contrast instead: the chosen option is lifted and brightened, the rest recede.
+ */
+.scoring {
+  display: flex;
+  gap: 0;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+}
 
 .scoring-opt {
   border: none;
-  border-radius: 0;
-  background: var(--surface-2);
+  border-radius: 5px;
+  background: transparent;
   color: var(--muted);
   font-size: 12px;
-  padding: 6px 11px;
+  padding: 5px 11px;
+  transition: color 0.12s, background 0.12s;
 }
-.scoring-opt.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+.scoring-opt:hover:not(.active) { color: #b9c0cd; background: rgba(255, 255, 255, 0.04); }
+
+/*
+ * The selected pill is the only lifted surface in the group, so it needs real separation from
+ * the track rather than one step up - a single shade apart disappears against the dark card.
+ */
+.scoring-opt.active {
+  background: #333946;
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
 
 /* Per-market points -------------------------------------------------------- */
 .pts-col {
@@ -555,13 +616,16 @@ button:disabled { opacity: 0.5; cursor: default; }
 .total-volatile { color: #e0a458; }
 .legend-range { color: var(--text); }
 
-/* Markets with no de-vigged consensus carry book margin, which the number must admit to. */
+/* Markets priced straight from the books still carry margin, which the number must admit to. */
 .vig-flag {
+  display: inline-block;
   margin-left: 5px;
   font-size: 10px;
+  font-style: italic;
   color: #5a6172;
   cursor: help;
   vertical-align: 1px;
+  white-space: nowrap;
 }
 
 /*
@@ -630,4 +694,112 @@ button:disabled { opacity: 0.5; cursor: default; }
 
 @media (prefers-reduced-motion: reduce) {
   .tip-bubble:popover-open { animation: none; }
+}
+
+/* Balance bar -------------------------------------------------------------- */
+/*
+ * The lean, as a picture. Unlike a trade calculator's ratio bar, this one draws the band where a
+ * gap is indistinguishable from week-to-week noise, so a marker resting inside it reads as the
+ * toss-up it is rather than as a narrow win.
+ *
+ * Width is capped deliberately. Stretched across the full page the whole meaningful range fell in
+ * a few hundred pixels of centre with empty track either side, and the bar read as decoration.
+ */
+.balance {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.balance-track {
+  position: relative;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/*
+ * The span where a gap says nothing. Labelled rather than left as a hatch: as a bare texture it
+ * read as decoration, and the one thing the bar has to communicate is where "no call" ends.
+ */
+.balance-deadzone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(139, 147, 163, 0.09);
+  /* Edges are the real information - they mark where a gap starts to mean something. */
+  border-left: 1px dashed rgba(139, 147, 163, 0.45);
+  border-right: 1px dashed rgba(139, 147, 163, 0.45);
+}
+.balance-deadzone-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--muted);
+  opacity: 0.75;
+  white-space: nowrap;
+  /* The zone is only 30% of the track, so the label is clipped rather than allowed to spill past
+     the dashed edges that carry the actual meaning. */
+  overflow: hidden;
+  padding: 0 2px;
+}
+
+.balance-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--accent);
+  opacity: 0.3;
+  transition: left 0.18s ease-out, right 0.18s ease-out;
+}
+/* Inside the dead zone the lean is not a finding, so the fill drops to the neutral grey. */
+.balance-track[data-toss-up] .balance-fill { background: var(--muted); opacity: 0.22; }
+
+.balance-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  margin-left: -1.5px;
+  background: var(--accent);
+  transition: left 0.18s ease-out;
+}
+.balance-track[data-toss-up] .balance-marker { background: var(--muted); }
+
+/* Each name sits under its own half of the track, so a side's label and its fill line up. */
+.balance-names {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.balance-names > :last-child { justify-self: end; }
+.balance-name {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: baseline;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.balance-name[data-lead] { color: var(--accent); font-weight: 600; }
+.balance-by { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .balance-fill, .balance-marker { transition: none; }
+}
+
+/* Three columns stop fitting well before the app's own breakpoint; stack rather than squeeze. */
+@media (max-width: 900px) {
+  .verdict { grid-template-columns: 1fr; justify-items: start; gap: 12px; }
+  .verdict .scoring { justify-self: start; }
+  .balance { max-width: none; }
 }
