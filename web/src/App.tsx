@@ -7,6 +7,13 @@ import type { MarketEdge } from './api/edge';
 import { PlayerSearch } from './components/PlayerSearch';
 import { PlayerPanel } from './components/PlayerPanel';
 import { Verdict } from './components/Verdict';
+import {
+  BetterStartIcon,
+  ICON_SIZE,
+  ICON_STROKE,
+  MovementDownIcon,
+  MovementUpIcon,
+} from './components/icons';
 import { coverage, project } from './api/projection';
 import type { Scoring } from './api/projection';
 import { meaningfulGap, uncertaintyFor } from './api/uncertainty';
@@ -196,7 +203,10 @@ export default function App() {
             start call is only made when the gap outruns it.
           </p>
           <p>
-            <strong className="legend-win">▲ Better start</strong> — compares the projection with
+            <strong className="legend-win">
+              <BetterStartIcon size={ICON_SIZE.inline} aria-hidden="true" /> Better start
+            </strong>{' '}
+            — compares the projection with
             the books' built-in margin removed: more yards or receptions, or a higher chance to
             score. This is the start/sit signal.
           </p>
@@ -206,7 +216,12 @@ export default function App() {
             <em>less</em> likely, so this is not a reason to start someone.
           </p>
           <p>
-            <strong className="legend-move">↗ ↘ Movement</strong> — how far the anytime-TD price
+            <strong className="legend-move">
+              <MovementUpIcon size={ICON_SIZE.inline} stroke={ICON_STROKE} aria-hidden="true" />
+              <MovementDownIcon size={ICON_SIZE.inline} stroke={ICON_STROKE} aria-hidden="true" />{' '}
+              Movement
+            </strong>{' '}
+            — how far the anytime-TD price
             has moved since it opened, in points of probability. Only shown on touchdown markets:
             the provider publishes an opening price but no opening line, so on yardage markets a
             price change usually reflects the book adjusting its margin, not its opinion.
