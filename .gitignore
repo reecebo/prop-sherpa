@@ -484,3 +484,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Cached odds snapshots (regenerable, and quota-derived)
+api/PropSherpa.Api/Cache/

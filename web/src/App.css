@@ -1,0 +1,633 @@
+:root {
+  --bg: #0f1115;
+  --surface: #171a21;
+  --surface-2: #1e222b;
+  --border: #282d38;
+  --text: #e8eaed;
+  --muted: #8b93a3;
+  --accent: #4ade80;
+  --accent-dim: #14532d;
+  --win-bg: #10261a;
+  --win-border: #2f6b45;
+  --danger: #f87171;
+  --danger-bg: #2a1517;
+  --danger-border: #5c2326;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+}
+
+.app { max-width: 1600px; margin: 0 auto; padding: 24px 20px 64px; }
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+h1 { margin: 0; font-size: 22px; letter-spacing: -0.02em; }
+.tagline { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+
+.cache { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.cache-meta { color: var(--muted); font-size: 12px; }
+
+button {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: #262b36; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+/* Split layout ------------------------------------------------------------ */
+.split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .split { grid-template-columns: 1fr; }
+}
+
+.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* Search ------------------------------------------------------------------ */
+.search { position: relative; }
+
+.search input {
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+.search input:focus { outline: none; border-color: var(--muted); }
+
+.search-results {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-results button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+}
+.search-name { font-size: 14px; }
+.search-meta { color: var(--muted); font-size: 12px; }
+
+/* Panel ------------------------------------------------------------------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.panel-empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--muted);
+  border-style: dashed;
+  background: none;
+}
+.panel-empty p { margin: 0; }
+
+/*
+ * Three zones: identity, projection, dismiss. The projection is pinned right against the total
+ * so the header has no dead middle, and the name block absorbs any slack instead.
+ */
+.panel-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-id { min-width: 0; flex: 1; }
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* A long name truncates rather than wrapping and pushing the header taller. */
+.panel-head h2 > :first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/*
+ * Position chip - the market set follows from this, so it reads next to the name and is
+ * colored to make a cross-position comparison obvious at a glance.
+ *
+ * Hues deliberately avoid green and red: green already means "winning edge" on a market row,
+ * and red means "remove". A position must never be mistaken for either.
+ */
+.pos-chip {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.pos-chip[data-pos='QB'] { background: #2a1e3d; border-color: #5b3fa0; color: #c4a7f5; }
+.pos-chip[data-pos='RB'] { background: #16303d; border-color: #2b6a86; color: #7dd3fc; }
+.pos-chip[data-pos='FB'] { background: #16303d; border-color: #2b6a86; color: #7dd3fc; }
+.pos-chip[data-pos='WR'] { background: #3a2a14; border-color: #8a6524; color: #fbbf24; }
+.pos-chip[data-pos='TE'] { background: #35203a; border-color: #8a4a92; color: #e879f9; }
+
+.search-name { display: flex; align-items: center; gap: 6px; }
+.panel-meta { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+
+/*
+ * Clearing a slot is rare, reversible, and the least important thing in the header, so it is a
+ * quiet icon that only colours on hover. As a red button it competed with the projection.
+ */
+.remove {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--border);
+  font-size: 18px;
+  line-height: 1;
+  transition: color 0.12s, background 0.12s;
+}
+.panel:hover .remove { color: var(--muted); }
+.remove:hover:not(:disabled) { background: var(--danger-bg); color: var(--danger); }
+.remove:focus-visible { color: var(--danger); outline: 1px solid var(--danger-border); }
+
+/* Props table: books as columns, markets as rows. */
+.table-wrap { overflow-x: auto; }
+
+.props {
+  /*
+   * Fixed layout is what makes the frozen columns work. Under the default `auto` algorithm a
+   * declared width is only a hint - the browser widens a column to fit its content - so the
+   * Market column grew past its 150px and the Projection column, offset by that same constant,
+   * came to rest on top of it instead of beside it.
+   */
+  table-layout: fixed;
+  /* Not 100%: the table has to be free to outgrow the panel so the book columns have somewhere
+     to scroll. Capping it at the container is what squeezed the columns in the first place. */
+  min-width: 100%;
+  /* separate borders break sticky cells: collapsed borders belong to the table, not the cell,
+     so they scroll away and leave the frozen columns with no right-hand edge. */
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  /*
+   * Market carries only a name and the occasional movement badge now; the comparison margin
+   * moved in with the projection it describes. That let the frozen pair get narrower overall
+   * while both columns stopped overflowing.
+   */
+  --market-w: 148px;
+  --fair-w: 150px;
+}
+
+.props th, .props td {
+  padding: 7px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+/* A fixed row height keeps the two panels aligned even when one market carries an extra flag. */
+.props tbody tr { height: 42px; }
+.props tbody tr:last-child th, .props tbody tr:last-child td { border-bottom: none; }
+
+.props thead th {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6b7383;
+  font-weight: 500;
+  background: var(--surface-2);
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.book-col { text-transform: capitalize !important; }
+
+/*
+ * The two reference columns stay put while the book columns scroll. A market's name and its
+ * projection are what every book price is read against, so losing them off the left edge makes
+ * the rest of the row meaningless. Their widths are fixed rather than content-sized: the second
+ * column's offset has to be a constant, and a sticky cell cannot measure the one before it.
+ */
+.market-col { width: var(--market-w); }
+.fair-col { width: var(--fair-w); }
+/* Fixed layout sizes every column from the header row, so the scrolling ones are set too. */
+.pts-col { width: 56px; }
+.book-col { width: 108px; }
+
+.props .market-col,
+.props .fair-col {
+  position: sticky;
+  z-index: 1;
+  /* Sticky cells overlap the ones they scroll past, so they cannot be transparent. */
+  background: var(--surface);
+}
+.props .market-col { left: 0; }
+.props .fair-col { left: var(--market-w); }
+
+/* Header cells scroll in neither direction, so they outrank the body's sticky cells. */
+.props thead .market-col,
+.props thead .fair-col { z-index: 3; background: var(--surface-2); }
+
+/*
+ * A row tint is painted by the <tr>, which a sticky cell's own background would hide. Each
+ * variant repeats its colour over the opaque base so the frozen columns match the row.
+ */
+.row-wins .market-col,
+.row-wins .fair-col {
+  background: linear-gradient(rgba(74, 222, 128, 0.045), rgba(74, 222, 128, 0.045)), var(--surface);
+}
+
+.market-col { font-weight: 500; }
+/* The flex layout moved onto an inner span: a table cell has to stay a table cell to go sticky. */
+.market-cell { display: flex; align-items: center; gap: 8px; }
+/* Badges sit inside a tooltip trigger, so the trigger is what must hold its ground in the row. */
+.market-cell .tip-trigger, .fair-row .tip-trigger { flex-shrink: 0; }
+.market-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/*
+ * The frozen pair needs a hard edge, or rows appear to simply end mid-number. The shadow reads
+ * as a seam the book columns pass under rather than a border between two static columns.
+ */
+.fair-col {
+  border-right: 1px solid var(--border);
+  box-shadow: 6px 0 8px -6px rgba(0, 0, 0, 0.55);
+  font-variant-numeric: tabular-nums;
+}
+/* Value, price and margin on one baseline, so the bar and +vig flag stay below them. */
+.fair-row { display: flex; align-items: baseline; gap: 6px; }
+.fair-value { font-weight: 600; font-size: 14px; }
+.fair-price { color: var(--muted); font-size: 12px; }
+/* The margin is pushed to the column's right edge, giving it a consistent home across rows
+   instead of floating at whatever x the price happens to end at. The trigger now occupies that
+   slot, so the offset moves onto it. */
+.fair-row .edge-tip { margin-left: auto; }
+
+/* Likelihood bar: length encodes scoring chance, so longer always reads as better. */
+.likelihood {
+  display: block;
+  height: 3px;
+  margin-top: 4px;
+  border-radius: 2px;
+  background: var(--border);
+  overflow: hidden;
+}
+.likelihood-fill { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
+
+.quote { font-variant-numeric: tabular-nums; }
+.q-line { margin-right: 6px; }
+.q-price { color: var(--muted); }
+
+/*
+ * Best price to BET (longest payout). Deliberately an outline rather than a solid fill: a
+ * long payout means the outcome is LESS likely, so it must not look like the "better player"
+ * signal, which is the solid green row tint.
+ */
+.quote.best-bet { box-shadow: inset 0 0 0 1px #3f6b52; border-radius: 3px; }
+.quote.best-bet .q-price { color: #7fb894; font-weight: 600; }
+
+.cell-empty { color: #4a5160; }
+
+/* A market the position calls for that no book posted - absence is a usage signal. */
+.no-line { color: #5a6172; font-style: italic; font-size: 12px; }
+
+/*
+ * The winning side of a market. Deliberately fainter than the card's own win marker: with row
+ * tints, edge badges and price outlines all in play, a full-strength fill on every winning row
+ * left nothing for the eye to land on.
+ */
+.row-wins { background: rgba(74, 222, 128, 0.045); }
+.row-wins .market-col { box-shadow: inset 2px 0 0 var(--accent); }
+
+.edge-badge {
+  /* The margin is the point of the badge - a clipped "+12." is worse than a truncated name,
+     so the name yields the space instead. */
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--win-border);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 0 5px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.books-empty {
+  margin: 0;
+  padding: 14px 16px;
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* States ------------------------------------------------------------------ */
+.cross-position {
+  margin: 16px 0 0;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid #8a6524;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.cross-position strong { color: var(--text); font-weight: 600; }
+
+/*
+ * Reference material, not reading material: it sits in a muted panel below the fold of the
+ * comparison and wraps into columns rather than running the full width as prose.
+ */
+.legend {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 8px 22px;
+}
+.legend p { margin: 0; }
+.legend-win { color: var(--accent); }
+.legend-bet { color: #7fb894; }
+
+.error {
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* Verdict ----------------------------------------------------------------- */
+/*
+ * The app's single answer, so it sits above the evidence and is the largest thing on screen.
+ */
+.verdict {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  /* The call is the only thing here now, so the bar is sized to a sentence, not a scoreboard. */
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 11px 16px;
+  margin-bottom: 16px;
+}
+
+/* A coin flip must not look like a recommendation. */
+.verdict[data-toss-up] { border-left-color: var(--muted); }
+
+.verdict-idle { border-left-color: var(--border); }
+.verdict-hint { margin: 0; color: var(--muted); font-size: 13px; }
+
+.verdict-call { min-width: 0; }
+.verdict-line { margin: 0; font-size: 16px; }
+
+/* The reason a call is close belongs under it, not inside the headline. */
+.verdict-sub { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }
+.verdict-name { color: var(--accent); }
+
+.verdict-gap {
+  margin-left: 8px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--win-bg);
+  border: 1px solid var(--win-border);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.verdict-caveat { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+
+
+/* Scoring format: changes the ordering, so it stays visible rather than hidden in a menu. */
+.scoring { display: flex; gap: 0; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+
+.scoring-opt {
+  border: none;
+  border-radius: 0;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: 12px;
+  padding: 6px 11px;
+}
+.scoring-opt.active { background: var(--accent-dim); color: var(--accent); font-weight: 600; }
+
+/* Per-market points -------------------------------------------------------- */
+.pts-col {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  min-width: 52px;
+}
+
+.pts { color: var(--text); }
+/* Dotted underline marks a number that was estimated, not read from a posted line. */
+.pts-est { color: var(--muted); }
+.pts-none { color: var(--border); }
+
+/* Line movement ------------------------------------------------------------ */
+/*
+ * Movement is a separate axis from the start/sit edge, so it is a neutral-weight badge rather
+ * than another green fill. Colors here read as direction, not as good/bad.
+ */
+.move-badge {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+  white-space: nowrap;
+}
+
+.move-badge[data-dir='up'] { background: #12263a; border: 1px solid #2b5f86; color: #7dd3fc; }
+.move-badge[data-dir='down'] { background: #2f2418; border: 1px solid #7a5a2b; color: #e0a458; }
+
+.legend-move { color: #7dd3fc; }
+
+/* Projected total ---------------------------------------------------------- */
+/*
+ * The total lives on the player's card rather than in the verdict, so it sits beside the markets
+ * that produced it. Its range and coverage travel with it - a projection read without its spread
+ * invites exactly the false precision they exist to prevent.
+ */
+.panel-actions { display: flex; align-items: flex-start; gap: 12px; }
+
+.total {
+  flex-shrink: 0;
+  text-align: right;
+  line-height: 1.15;
+}
+
+.total-points {
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.total-unit { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 2px; }
+
+/* Range, coverage and flags share one line: four stacked rows made the header top-heavy. */
+.total-meta {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 5px;
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+
+.total-sep { padding-left: 5px; border-left: 1px solid var(--border); }
+.total-est { color: var(--muted); border-bottom: 1px dotted currentColor; }
+
+/* A TD-heavy projection is the same number with a very different shape behind it. */
+.total-volatile { color: #e0a458; }
+.legend-range { color: var(--text); }
+
+/* Markets with no de-vigged consensus carry book margin, which the number must admit to. */
+.vig-flag {
+  margin-left: 5px;
+  font-size: 10px;
+  color: #5a6172;
+  cursor: help;
+  vertical-align: 1px;
+}
+
+/*
+ * The winning card carries the call. A coloured number and a rule read as emphasis without
+ * adding a fourth green fill to a screen that already has row tints, badges and price outlines.
+ */
+.total-win { padding-right: 10px; border-right: 2px solid var(--accent); }
+.total-win .total-points { color: var(--accent); }
+
+/* Tooltip ------------------------------------------------------------------ */
+/*
+ * Replaces the native `title` attribute, which showed after a delay we could not set, in the OS
+ * style rather than the app's, and inside the props table appeared at the cursor instead of
+ * beside the number it explained.
+ */
+.tip-trigger {
+  /* The trigger must have a box to measure; inline elements report the wrong rect when wrapped. */
+  display: inline-flex;
+  align-items: center;
+  gap: inherit;
+}
+.tip-trigger:focus { outline: none; }
+.tip-trigger:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* An explanatory trigger says so, so the hint is discoverable without hovering everything. */
+.tip-underline {
+  cursor: help;
+  text-decoration: underline dotted var(--border);
+  text-underline-offset: 3px;
+}
+.tip-underline:hover { text-decoration-color: var(--muted); }
+
+.tip-bubble {
+  /* The popover API supplies the top layer; position and size stay ours. */
+  position: fixed;
+  margin: 0;
+  inset: auto;
+  max-width: 260px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  /* Hints wrap; the table's nowrap must not follow the text in here. */
+  white-space: normal;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+}
+.tip-bubble:popover-open {
+  animation: tip-in 0.12s ease-out;
+}
+
+@keyframes tip-in {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tip-bubble:popover-open { animation: none; }
+}
