@@ -2,6 +2,7 @@ import type { PlayerProps } from '../api/types';
 import { coverage, formatPoints, project, SCORING_LABELS } from '../api/projection';
 import type { Scoring } from '../api/projection';
 import { meaningfulGap, uncertaintyFor } from '../api/uncertainty';
+import { BalanceBar } from './BalanceBar';
 
 interface Props {
   players: (PlayerProps | null)[];
@@ -109,7 +110,8 @@ export function Verdict({ players, scoring, onScoringChange }: Props) {
           <p className="verdict-line">
             <strong>Too close to call</strong>
             <span className="verdict-sub">
-              {formatPoints(gap)} pts apart — these projections swing by more than that most weeks.
+              {formatPoints(gap)} pts apart — these projections swing by more than that most
+              weeks.
             </span>
           </p>
         ) : (
@@ -126,6 +128,14 @@ export function Verdict({ players, scoring, onScoringChange }: Props) {
           </p>
         )}
       </div>
+
+      {/* The bar restates the call as a picture: how far the lean is, and whether it clears the
+          band where a gap means nothing. */}
+      <BalanceBar
+        names={[a.name, b.name]}
+        points={[pa.points, pb.points]}
+        threshold={threshold}
+      />
 
       {picker}
     </section>
