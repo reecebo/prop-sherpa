@@ -1,6 +1,5 @@
 using Microsoft.Extensions.Options;
 using PropSherpa.Api.Features.Odds;
-using PropSherpa.Api.Features.Players;
 using PropSherpa.Api.Features.Props;
 using PropSherpa.Api.Integrations.SportsGameOdds;
 
@@ -44,7 +43,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("web");
 
-app.MapPlayersEndpoints();
 app.MapOddsEndpoints();
 app.MapPropsEndpoints();
 
