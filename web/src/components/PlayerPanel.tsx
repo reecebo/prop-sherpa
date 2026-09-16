@@ -7,6 +7,14 @@ import { formatPoints, project } from '../api/projection';
 import type { Projection, Scoring } from '../api/projection';
 import { uncertaintyFor } from '../api/uncertainty';
 import { Tooltip } from './Tooltip';
+import {
+  BetterStartIcon,
+  ICON_SIZE,
+  ICON_STROKE,
+  MovementDownIcon,
+  MovementUpIcon,
+  RemoveIcon,
+} from './icons';
 import type { Uncertainty } from '../api/uncertainty';
 
 interface Props {
@@ -79,7 +87,7 @@ export function PlayerPanel({ player, books, edges, side, scoring, wins, onRemov
           aria-label={`Remove ${player.name}`}
           title={`Remove ${player.name}`}
         >
-          <span aria-hidden="true">×</span>
+          <RemoveIcon size={ICON_SIZE.control} stroke={ICON_STROKE} aria-hidden="true" />
         </button>
       </header>
 
@@ -133,7 +141,11 @@ export function PlayerPanel({ player, books, edges, side, scoring, wins, onRemov
                           content={`Opened ${movement.openPrice}, now ${movement.currentPrice} — ${formatMovement(movement)}`}
                         >
                           <span className="move-badge" data-dir={movementDirection(movement)}>
-                            {movementDirection(movement) === 'up' ? '↗' : '↘'}{' '}
+                            {movementDirection(movement) === 'up' ? (
+                              <MovementUpIcon size={ICON_SIZE.inline} stroke={ICON_STROKE} aria-hidden="true" />
+                            ) : (
+                              <MovementDownIcon size={ICON_SIZE.inline} stroke={ICON_STROKE} aria-hidden="true" />
+                            )}
                             {(movement.delta * 100).toFixed(1)}
                           </span>
                         </Tooltip>
@@ -160,7 +172,10 @@ export function PlayerPanel({ player, books, edges, side, scoring, wins, onRemov
                               className="edge-tip"
                               content={`Better ${basis === 'probability' ? 'scoring chance' : 'projection'} by ${edge?.margin}`}
                             >
-                              <span className="edge-badge">▲ {edge?.margin}</span>
+                              <span className="edge-badge">
+                                <BetterStartIcon size={ICON_SIZE.inline} aria-hidden="true" />
+                                {edge?.margin}
+                              </span>
                             </Tooltip>
                           )}
                         </span>

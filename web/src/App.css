@@ -20,6 +20,20 @@
   color-scheme: dark;
 }
 
+/*
+ * Tabler icons inherit the text colour of whatever they sit in, so a badge or button styles its
+ * icon by styling itself - there is no separate icon colour to keep in sync.
+ *
+ * `vertical-align` is the load-bearing part. An SVG is an inline-block, so by default it sits on
+ * the text baseline and hangs below it, pushing short badges a pixel taller than their neighbours
+ * and breaking row alignment across the two panels. Centring it on the text box fixes that
+ * everywhere at once.
+ */
+.tabler-icon {
+  vertical-align: -0.125em;
+  flex-shrink: 0;
+}
+
 * { box-sizing: border-box; }
 
 body {
@@ -204,7 +218,6 @@ button:disabled { opacity: 0.5; cursor: default; }
   border: none;
   border-radius: 50%;
   color: var(--muted);
-  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   transition: color 0.12s, background 0.12s;
@@ -382,6 +395,11 @@ button:disabled { opacity: 0.5; cursor: default; }
   /* The margin is the point of the badge - a clipped "+12." is worse than a truncated name,
      so the name yields the space instead. */
   flex-shrink: 0;
+  /* Inline-flex so the caret and the number centre on each other rather than on the text
+     baseline, which left the caret sitting low against the digits. */
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
   background: none;
   border: 1px solid var(--win-border);
   color: var(--accent);
@@ -431,6 +449,15 @@ button:disabled { opacity: 0.5; cursor: default; }
   gap: 8px 22px;
 }
 .legend p { margin: 0; }
+/* The legend shows the same marks as the table, so they align the same way - a legend whose
+   icon sits differently from the badge it describes reads as a different mark. */
+.legend-win,
+.legend-move {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .legend-win { color: var(--accent); }
 .legend-bet { color: #7fb894; }
 
@@ -558,6 +585,9 @@ button:disabled { opacity: 0.5; cursor: default; }
  * than another green fill. Colors here read as direction, not as good/bad.
  */
 .move-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   padding: 1px 5px;
   border-radius: 4px;
   font-size: 11px;
