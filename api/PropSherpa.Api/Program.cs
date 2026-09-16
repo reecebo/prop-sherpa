@@ -4,6 +4,7 @@ using PropSherpa.Api.Features.Odds;
 using PropSherpa.Api.Features.Props;
 using PropSherpa.Api.Integrations.Sleeper;
 using PropSherpa.Api.Integrations.SportsGameOdds;
+using PropSherpa.Api.Matching;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -39,6 +40,8 @@ builder.Services.AddSingleton<PositionCatalog>();
 builder.Services.AddSingleton<PropCache>();
 builder.Services.AddSingleton<SleeperPlayerDirectory>();
 builder.Services.AddSingleton<SleeperLeagueCache>();
+builder.Services.AddSingleton<IPlayerMatcher, PlayerMatcher>();
+builder.Services.AddScoped<LineupBuilder>();
 
 builder.Services.AddCors(options =>
 {
