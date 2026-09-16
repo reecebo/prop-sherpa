@@ -1,233 +1,107 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api } from './api/client';
-import type { CacheStatus, CompareResponse, PlayerSearchResult } from './api/types';
-import { formatRelative } from './api/odds';
-import { edgeFor } from './api/edge';
-import type { MarketEdge } from './api/edge';
-import { PlayerSearch } from './components/PlayerSearch';
-import { PlayerPanel } from './components/PlayerPanel';
-import { Verdict } from './components/Verdict';
-import {
-  BetterStartIcon,
-  ICON_SIZE,
-  ICON_STROKE,
-  MovementDownIcon,
-  MovementUpIcon,
-} from './components/icons';
-import { coverage, project } from './api/projection';
-import type { Scoring } from './api/projection';
-import { meaningfulGap, uncertaintyFor } from './api/uncertainty';
+import { useEffect, useState } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
+import { Sidebar } from './components/Sidebar';
+import { ICON_SIZE, ICON_STROKE, MenuIcon } from './components/icons';
+import { DEFAULT_PATH } from './navigation';
+import ComparePage from './pages/ComparePage';
 import './App.css';
 
-/** Two sides, each independently searched. */
-type Slots = [PlayerSearchResult | null, PlayerSearchResult | null];
+/**
+ * Where the always-present sidebar gives way to an overlay drawer. Must match the `max-width` in
+ * App.css: the stylesheet decides which nav is on screen, and this decides whether the trigger
+ * and the Escape key have anything to act on.
+ */
+const DRAWER_QUERY = '(max-width: 1100px)';
 
+/**
+ * The application shell: navigation, and whichever page the route selects.
+ *
+ * Pages render their own header and own everything below it. This file holds only what is true on
+ * every page, so adding one means adding a route here and an entry in `navigation.ts`.
+ */
 export default function App() {
-  const [slots, setSlots] = useState<Slots>([null, null]);
-  const [data, setData] = useState<CompareResponse | null>(null);
-  const [status, setStatus] = useState<CacheStatus | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
-  // Scoring format changes the answer, so it is a first-class control rather than a setting.
-  const [scoring, setScoring] = useState<Scoring>('ppr');
+  /*
+   * Drawer state is deliberately not persisted. Restoring an open drawer on load would cover the
+   * page with a menu nobody just asked for. On wide screens it is never read at all - the nav is
+   * always visible there and has no open or closed state to remember.
+   */
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    api.status().then(setStatus).catch(() => undefined);
-  }, []);
-
-  const ids = slots.filter((slot): slot is PlayerSearchResult => slot !== null).map((s) => s.playerId);
-  const idKey = ids.join(',');
-
-  useEffect(() => {
-    if (ids.length === 0) {
-      setData(null);
-      return;
-    }
-
-    let cancelled = false;
-
-    api
-      .compare(ids)
-      .then((response) => !cancelled && (setData(response), setError(null)))
-      .catch((err: Error) => !cancelled && setError(err.message));
-
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idKey]);
-
-  const refresh = useCallback(async () => {
-    setRefreshing(true);
-    setError(null);
-
-    try {
-      setStatus(await api.refresh());
-      if (ids.length > 0) setData(await api.compare(ids));
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setRefreshing(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idKey]);
-
-  // Keep the API's players in slot order, so the left panel is always slot 0.
-  const ordered = useMemo(
-    () =>
-      slots.map((slot) =>
-        slot ? data?.players.find((p) => p.playerId === slot.playerId) ?? null : null,
-      ),
-    [slots, data],
+  /*
+   * Whether the stylesheet is currently showing the drawer rather than the pinned sidebar. Read
+   * from the same media query the CSS uses rather than from `window.innerWidth`, so the two can
+   * never disagree about where the breakpoint is - and so zoom, which changes the effective
+   * width, is handled for free.
+   */
+  const [isNarrow, setIsNarrow] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(DRAWER_QUERY).matches,
   );
 
-  /** Edges are computed once across both slots, then read by each panel. */
-  const edges = useMemo(() => {
-    const result = new Map<string, MarketEdge>();
-    if (!ordered[0] || !ordered[1]) return result;
+  useEffect(() => {
+    const query = window.matchMedia(DRAWER_QUERY);
+    const onChange = (event: MediaQueryListEvent) => {
+      setIsNarrow(event.matches);
+      // Widening past the breakpoint closes the drawer, so a stale scrim never covers the page.
+      if (!event.matches) setDrawerOpen(false);
+    };
 
-    const statIds = new Set([
-      ...ordered[0].lines.map((line) => line.statId),
-      ...ordered[1].lines.map((line) => line.statId),
-    ]);
+    query.addEventListener('change', onChange);
+    return () => query.removeEventListener('change', onChange);
+  }, []);
 
-    for (const statId of statIds) {
-      result.set(
-        statId,
-        edgeFor(ordered.map((player) => player?.lines.find((line) => line.statId === statId))),
-      );
+  /*
+   * Escape closes the drawer. An overlay that traps you until you find the right spot to click is
+   * the usual complaint about slide-out menus, and the scrim alone does not help keyboard users.
+   */
+  useEffect(() => {
+    if (!drawerOpen) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setDrawerOpen(false);
     }
 
-    return result;
-  }, [ordered]);
-
-  /**
-   * Which side the start/sit call favours, or null when there is no call to make. The verdict
-   * states it in words; the panels use it to mark the winning card.
-   */
-  const winner = useMemo(() => {
-    const [a, b] = ordered;
-    if (!a || !b) return null;
-
-    const projections = [project(a, scoring), project(b, scoring)];
-    const [pa, pb] = projections;
-    if (!pa || !pb) return null;
-
-    const coverages = [coverage(pa), coverage(pb)];
-    const lopsided =
-      coverages.some((value) => value < 0.5) && Math.abs(coverages[0] - coverages[1]) >= 0.25;
-    if (lopsided) return null;
-
-    const gap = Math.abs(pa.points - pb.points);
-    const threshold = meaningfulGap(
-      uncertaintyFor(a, pa, scoring),
-      uncertaintyFor(b, pb, scoring),
-    );
-    if (gap < threshold) return null;
-
-    return pa.points >= pb.points ? 0 : 1;
-  }, [ordered, scoring]);
-
-  function setSlot(index: 0 | 1, player: PlayerSearchResult | null) {
-    setSlots((current) => {
-      const next = [...current] as Slots;
-      next[index] = player;
-      return next;
-    });
-  }
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [drawerOpen]);
 
   return (
-    <div className="app">
-      <header className="header">
-        <div>
-          <h1>PropSherpa</h1>
-          <p className="tagline">Compare player props across books to set your lineup.</p>
-        </div>
+    <div className="shell">
+      <Sidebar open={drawerOpen} onClose={() => setDrawerOpen(false)} />
 
-        <div className="cache">
-          {status?.cached ? (
-            <span className="cache-meta">
-              {status.players} players · {status.eventCount} games ·{' '}
-              {status.retrievedAt && formatRelative(status.retrievedAt)}
-            </span>
-          ) : (
-            <span className="cache-meta">No odds cached yet</span>
-          )}
+      <div className="shell-main">
+        {/*
+         * Exists only below the breakpoint, where the nav is off-screen and cannot offer a way
+         * back to itself. Above it the nav is always visible, so a button to reveal it would do
+         * nothing - and is hidden in CSS rather than unmounted, so no width check gates the
+         * markup.
+         */}
+        <button
+          type="button"
+          className="nav-trigger"
+          onClick={() => setDrawerOpen((value) => !value)}
+          aria-label="Open navigation"
+          aria-expanded={drawerOpen}
+          aria-controls="main-nav"
+          /* Off the tab order when the stylesheet has hidden it, so wide-screen keyboard users
+             do not tab through a control they cannot see. */
+          tabIndex={isNarrow ? undefined : -1}
+        >
+          <MenuIcon size={ICON_SIZE.nav} stroke={ICON_STROKE} aria-hidden="true" />
+        </button>
 
-          {/* Each refresh spends API quota, so it stays a deliberate click. */}
-          <button type="button" className="refresh" onClick={refresh} disabled={refreshing}>
-            {refreshing ? 'Refreshing…' : 'Refresh odds'}
-          </button>
-        </div>
-      </header>
+        <main className="app">
+          <Routes>
+            {/* One line per page, written out rather than generated from NAV_ITEMS - the nav
+                list says where a page appears in the menu, not what renders there, and mapping
+                it to a component would silently serve the wrong page for the next entry. */}
+            <Route path="/compare" element={<ComparePage />} />
 
-      {error && <p className="error">{error}</p>}
-
-      <Verdict players={ordered} scoring={scoring} onScoringChange={setScoring} />
-
-      <div className="split">
-        {([0, 1] as const).map((index) => (
-          <div className="side" key={index}>
-            <PlayerSearch
-              onAdd={(player) => setSlot(index, player)}
-              disabledIds={ids}
-              placeholder={index === 0 ? 'Search player A…' : 'Search player B…'}
-            />
-
-            <PlayerPanel
-              player={ordered[index]}
-              books={data?.books ?? []}
-              edges={edges}
-              side={index}
-              scoring={scoring}
-              wins={winner === index}
-              onRemove={() => setSlot(index, null)}
-            />
-          </div>
-        ))}
+            {/* `/` and anything unrecognised land on the default page rather than a blank screen.
+                `replace` keeps the bad path out of history, so Back does not return to it. */}
+            <Route path="*" element={<Navigate to={DEFAULT_PATH} replace />} />
+          </Routes>
+        </main>
       </div>
-
-      {/* Comparing across positions is legitimate but worth naming - the market sets differ. */}
-      {ordered[0]?.position && ordered[1]?.position && ordered[0].position !== ordered[1].position && (
-        <p className="cross-position">
-          Comparing <strong>{ordered[0].position}</strong> against{' '}
-          <strong>{ordered[1].position}</strong> — only shared markets are scored.
-        </p>
-      )}
-
-      {edges.size > 0 && (
-        <div className="legend">
-          <p>
-            <strong className="legend-range">Range under each total</strong> — projections are
-            medians, not forecasts. The range is roughly one standard deviation either way, and a
-            start call is only made when the gap outruns it.
-          </p>
-          <p>
-            <strong className="legend-win">
-              <BetterStartIcon size={ICON_SIZE.inline} aria-hidden="true" /> Better start
-            </strong>{' '}
-            — compares the projection with
-            the books' built-in margin removed: more yards or receptions, or a higher chance to
-            score. This is the start/sit signal.
-          </p>
-          <p>
-            <strong className="legend-bet">Outlined price</strong> — the longest payout among
-            books, i.e. where you would place the bet. A long payout means the books think it is{' '}
-            <em>less</em> likely, so this is not a reason to start someone.
-          </p>
-          <p>
-            <strong className="legend-move">
-              <MovementUpIcon size={ICON_SIZE.inline} stroke={ICON_STROKE} aria-hidden="true" />
-              <MovementDownIcon size={ICON_SIZE.inline} stroke={ICON_STROKE} aria-hidden="true" />{' '}
-              Movement
-            </strong>{' '}
-            — how far the anytime-TD price
-            has moved since it opened, in points of probability. Only shown on touchdown markets:
-            the provider publishes an opening price but no opening line, so on yardage markets a
-            price change usually reflects the book adjusting its margin, not its opinion.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
