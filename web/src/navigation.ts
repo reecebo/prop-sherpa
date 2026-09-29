@@ -1,4 +1,4 @@
-import { CompareNavIcon } from './components/icons';
+import { CompareNavIcon, LineupNavIcon } from './components/icons';
 import type { Icon } from '@tabler/icons-react';
 
 /**
@@ -27,6 +27,12 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Compare players',
     icon: CompareNavIcon,
     description: 'Compare two players across books to set your lineup.',
+  },
+  {
+    path: '/lineup',
+    label: 'Lineup optimizer',
+    icon: LineupNavIcon,
+    description: 'Check a Sleeper roster against the books, slot by slot.',
   },
 ];
 

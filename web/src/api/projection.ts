@@ -25,11 +25,43 @@ const POINTS_PER_RECEPTION: Record<Scoring, number> = {
   standard: 0,
 };
 
-/** Standard fantasy scoring. These are league constants, not tunables. */
-const PASS_YARDS_PER_POINT = 25;
-const RUSH_REC_YARDS_PER_POINT = 10;
-const POINTS_PER_PASSING_TD = 4;
-const POINTS_PER_TD = 6;
+/**
+ * What a league pays per unit.
+ *
+ * The three-way format above only describes receptions, which is enough when the user is picking a
+ * format by hand but not when a real league is telling us its rules: six-point passing touchdowns
+ * and tight end bonuses are both common, and either would make a projection quietly wrong rather
+ * than visibly broken.
+ */
+export interface ScoringRules {
+  /** Points per passing yard, e.g. 0.04 for the usual 25 yards a point. */
+  passYd: number;
+  passTd: number;
+  /** Rushing and receiving yards are paid at the same rate in every common ruleset. */
+  rushRecYd: number;
+  rec: number;
+  /** Any touchdown, which is how the anytime-TD market is scored. */
+  td: number;
+  /** Extra points per reception for tight ends only. */
+  bonusRecTe?: number;
+}
+
+/** Standard fantasy scoring, used when only a format was chosen. */
+const DEFAULT_RULES: ScoringRules = {
+  passYd: 1 / 25,
+  passTd: 4,
+  rushRecYd: 1 / 10,
+  rec: POINTS_PER_RECEPTION.half,
+  td: 6,
+};
+
+export function rulesFor(scoring: Scoring): ScoringRules {
+  return { ...DEFAULT_RULES, rec: POINTS_PER_RECEPTION[scoring] };
+}
+
+function resolveRules(scoring: Scoring | ScoringRules): ScoringRules {
+  return typeof scoring === 'string' ? rulesFor(scoring) : scoring;
+}
 
 /**
  * Fallback values for a market the position calls for but no book posted.
@@ -117,25 +149,25 @@ function valueOf(line: PropLine): number | null {
 }
 
 /** Points contributed by one market at a given magnitude. */
-function pointsFor(statId: string, value: number, scoring: Scoring): number {
+function pointsFor(statId: string, value: number, rules: ScoringRules, position: string | null): number {
   switch (statId) {
     case 'passing_yards':
-      return value / PASS_YARDS_PER_POINT;
+      return value * rules.passYd;
     case 'passing_touchdowns':
-      return value * POINTS_PER_PASSING_TD;
+      return value * rules.passTd;
     case 'rushing_yards':
     case 'receiving_yards':
-      return value / RUSH_REC_YARDS_PER_POINT;
+      return value * rules.rushRecYd;
     case 'receiving_receptions':
-      return value * POINTS_PER_RECEPTION[scoring];
+      return value * (rules.rec + (position === 'TE' ? rules.bonusRecTe ?? 0 : 0));
     // Anytime TD is a probability, so it contributes its expected value.
     case 'touchdowns':
-      return value * POINTS_PER_TD;
+      return value * rules.td;
     // 2+ TD adds only the SECOND touchdown. Anytime TD already counted the first, and every
     // player who scores twice also scored once, so these probabilities stack rather than
     // compete - adding the full 6 again would pay twice for one of the two scores.
     case 'touchdowns_2plus':
-      return value * POINTS_PER_TD;
+      return value * rules.td;
     case 'passing_touchdowns_2plus':
       // Passing TDs already carry a full count line, so a 2+ price would re-count what the
       // over/under total measures. It is shown as context, not scored.
@@ -152,7 +184,8 @@ function pointsFor(statId: string, value: number, scoring: Scoring): number {
  * Projects a player's fantasy points. Returns null when too little is posted to be meaningful -
  * a player with no real lines at all should not appear as a confident zero.
  */
-export function project(player: PlayerProps, scoring: Scoring): Projection | null {
+export function project(player: PlayerProps, scoring: Scoring | ScoringRules): Projection | null {
+  const rules = resolveRules(scoring);
   const baselines = player.position ? ABSENT_BASELINE[player.position] ?? {} : {};
   const breakdown: Projection['breakdown'] = [];
   const estimated: string[] = [];
@@ -175,7 +208,7 @@ export function project(player: PlayerProps, scoring: Scoring): Projection | nul
       postedStatIds.add(line.statId);
     }
 
-    const points = pointsFor(line.statId, value, scoring);
+    const points = pointsFor(line.statId, value, rules, player.position);
     if (points === 0) continue;
 
     breakdown.push({ statId: line.statId, market: line.market, points, estimated: wasEstimated });

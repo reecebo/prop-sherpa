@@ -1,4 +1,4 @@
-import type { Projection, Scoring } from './projection';
+import type { Projection, Scoring, ScoringRules } from './projection';
 import type { PlayerProps } from './types';
 
 /**
@@ -58,7 +58,7 @@ export interface Uncertainty {
 export function uncertaintyFor(
   player: PlayerProps,
   projection: Projection | null,
-  _scoring: Scoring,
+  _scoring: Scoring | ScoringRules,
 ): Uncertainty | null {
   if (!projection || projection.points <= 0) return null;
 

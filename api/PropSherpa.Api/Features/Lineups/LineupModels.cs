@@ -26,19 +26,54 @@ public record LineupPlayer(
     string? Team,
     string? InjuryStatus,
     PlayerProps? Props,
-    string? Unmatched);
+    string? Unmatched)
+{
+    /// <summary>Sleeper's own projection for the week, for contrast with ours.</summary>
+    public double? SleeperPoints { get; init; }
 
-/// <summary>
-/// One lineup slot. Slots repeat - RB, RB, FLEX, FLEX, FLEX - so identity is the index within the
-/// starting lineup, never the slot name.
-/// </summary>
+    /// <summary>
+    /// True when this bench player is in the lineup the manager set but not in the optimal one -
+    /// the mirror of <see cref="LineupSlot.Upgraded"/>.
+    /// </summary>
+    public bool Benched { get; init; }
+
+    /// <summary>The player who takes their place, paired the same way an upgrade is.</summary>
+    public LineupPlayer? ReplacedBy { get; init; }
+
+    /// <summary>
+    /// Indices of the lineup slots this player could legally fill.
+    ///
+    /// Sent rather than derived so the client never has to reimplement slot eligibility - the rule
+    /// lives in <see cref="RosterSlots"/> alone, and cannot drift into a second copy that
+    /// disagrees about what a FLEX takes.
+    /// </summary>
+    public IReadOnlyList<int> EligibleSlots { get; init; } = [];
+}
+
+/// <summary>One slot of the optimal lineup.</summary>
 public record LineupSlot(
     int Index,
     string Slot,
     string Label,
+    /// <summary>The best player available for this slot.</summary>
     LineupPlayer? Starter,
-    /// <summary>Bench players this slot accepts. Ranking them is the client's job.</summary>
-    IReadOnlyList<LineupPlayer> Candidates);
+    /// <summary>Everyone else eligible here, for the drawer's comparison.</summary>
+    IReadOnlyList<LineupPlayer> Candidates)
+{
+    /// <summary>
+    /// True when this slot's player is not in the lineup the manager actually set.
+    ///
+    /// Judged on who is in the lineup overall rather than slot by slot: a player who keeps starting
+    /// but shifts from FLEX to WR has not been changed, and flagging him would be noise.
+    /// </summary>
+    public bool Upgraded { get; init; }
+
+    /// <summary>
+    /// The benched player this one displaces, when the swap can be attributed to a single player.
+    /// Null when the optimal lineup rearranges more than it replaces.
+    /// </summary>
+    public LineupPlayer? Replaces { get; init; }
+}
 
 public record LineupTeamSummary(int RosterId, string TeamName, string Manager);
 
@@ -67,5 +102,5 @@ public record LineupResponse(
     DateTimeOffset RostersRetrievedAt,
     DateTimeOffset? PlayersRetrievedAt,
     IReadOnlyList<string> Books,
-    /// <summary>Starters with no odds, as a coverage signal for the page header.</summary>
+    /// <summary>Slots with no priced player available, as a coverage signal.</summary>
     int UnmatchedStarters);

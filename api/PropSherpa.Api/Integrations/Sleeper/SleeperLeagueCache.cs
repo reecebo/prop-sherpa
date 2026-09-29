@@ -93,12 +93,27 @@ public class SleeperLeagueCache
 
         await Task.WhenAll(league, users, rosters, state);
 
+        // Needs the week, so it cannot join the group above. Their projections are a nicety, not
+        // the point of the page, so a failure here must not cost the user their rosters.
+        IReadOnlyDictionary<string, SleeperProjection> projections;
+        try
+        {
+            projections = await _client.GetProjectionsAsync(
+                league.Result.Season, state.Result.Week, ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            _logger.LogWarning(ex, "Could not fetch Sleeper projections; showing ours only.");
+            projections = new Dictionary<string, SleeperProjection>();
+        }
+
         var snapshot = new SleeperLeagueSnapshot(
             DateTimeOffset.UtcNow,
             state.Result.Week,
             league.Result,
             users.Result,
-            rosters.Result);
+            rosters.Result,
+            projections);
 
         await SaveToDiskAsync(leagueId, snapshot, ct);
 

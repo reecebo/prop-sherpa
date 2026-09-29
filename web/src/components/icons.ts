@@ -14,14 +14,22 @@ export {
   // The winning side of a market comparison. A filled caret rather than an outline: it sits at
   // 11px inside a badge, where a stroked triangle turns to mush.
   IconCaretUpFilled as BetterStartIcon,
+  // Its mirror: a player leaving the lineup. Same glyph flipped, so the pair reads as one idea.
+  IconCaretDownFilled as BenchedIcon,
   // Price drift on anytime-TD markets, in both directions.
   IconTrendingUp as MovementUpIcon,
   IconTrendingDown as MovementDownIcon,
   // Clearing a player slot.
   IconX as RemoveIcon,
 
+  // Opening a lineup row for detail. One glyph rotated by CSS rather than a pair that swaps.
+  IconChevronDown as ExpandIcon,
+  // A player the books have not priced.
+  IconAlertTriangle as NoPropsIcon,
+
   // Navigation.
   IconArrowsLeftRight as CompareNavIcon,
+  IconListCheck as LineupNavIcon,
   // One icon for showing and hiding the nav, rather than a pair that swaps: the button is in a
   // fixed spot and its meaning is "navigation", so a changing glyph reads as a different control.
   IconMenu2 as MenuIcon,

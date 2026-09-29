@@ -46,6 +46,46 @@ public class SleeperClient : ISleeperClient
         return players;
     }
 
+    public async Task<IReadOnlyDictionary<string, SleeperProjection>> GetProjectionsAsync(
+        string season,
+        int week,
+        CancellationToken ct = default)
+    {
+        // Projections sit on a different host from the documented v1 API, with no /v1 prefix.
+        var url = $"https://api.sleeper.com/projections/nfl/{season}/{week}?season_type=regular";
+
+        using var response = await _httpClient.GetAsync(url, ct);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var document = await JsonDocument.ParseAsync(stream, cancellationToken: ct);
+
+        var projections = new Dictionary<string, SleeperProjection>(StringComparer.Ordinal);
+
+        foreach (var element in document.RootElement.EnumerateArray())
+        {
+            if (element.GetProperty("player_id").GetString() is not { } playerId) continue;
+            if (!element.TryGetProperty("stats", out var stats)) continue;
+
+            var projection = new SleeperProjection(
+                Number(stats, "pts_ppr"),
+                Number(stats, "pts_half_ppr"),
+                Number(stats, "pts_std"));
+
+            // Most records are inactive players carrying no projection at all.
+            if (projection is { Ppr: null, HalfPpr: null, Standard: null }) continue;
+
+            projections[playerId] = projection;
+        }
+
+        return projections;
+    }
+
+    private static double? Number(JsonElement element, string name) =>
+        element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number
+            ? value.GetDouble()
+            : null;
+
     private async Task<T> GetAsync<T>(string path, CancellationToken ct)
     {
         using var response = await _httpClient.GetAsync(path, ct);

@@ -4,6 +4,7 @@ import { Sidebar } from './components/Sidebar';
 import { ICON_SIZE, ICON_STROKE, MenuIcon } from './components/icons';
 import { DEFAULT_PATH } from './navigation';
 import ComparePage from './pages/ComparePage';
+import LineupPage from './pages/LineupPage';
 import './App.css';
 
 /**
@@ -95,6 +96,7 @@ export default function App() {
                 list says where a page appears in the menu, not what renders there, and mapping
                 it to a component would silently serve the wrong page for the next entry. */}
             <Route path="/compare" element={<ComparePage />} />
+            <Route path="/lineup" element={<LineupPage />} />
 
             {/* `/` and anything unrecognised land on the default page rather than a blank screen.
                 `replace` keeps the bad path out of history, so Back does not return to it. */}

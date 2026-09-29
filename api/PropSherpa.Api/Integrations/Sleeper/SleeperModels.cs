@@ -50,6 +50,22 @@ public record SleeperPlayer(
     bool Active);
 
 /// <summary>
+/// Sleeper's projection for one player in one week, in each of the three common formats. A league
+/// with custom scoring will not match any of them exactly, which is why this is shown for contrast
+/// rather than used in any calculation.
+/// </summary>
+public record SleeperProjection(double? Ppr, double? HalfPpr, double? Standard)
+{
+    /// <summary>The variant closest to a league's points per reception.</summary>
+    public double? For(double pointsPerReception) => pointsPerReception switch
+    {
+        >= 0.75 => Ppr,
+        >= 0.25 => HalfPpr,
+        _ => Standard,
+    };
+}
+
+/// <summary>
 /// Everything about a league that a lineup needs, fetched together and cached as a unit so the
 /// page never waits on Sleeper.
 /// </summary>
@@ -58,4 +74,6 @@ public record SleeperLeagueSnapshot(
     int Week,
     SleeperLeague League,
     IReadOnlyList<SleeperUser> Users,
-    IReadOnlyList<SleeperRoster> Rosters);
+    IReadOnlyList<SleeperRoster> Rosters,
+    /// <summary>Sleeper's own projections for this week, for comparison against ours.</summary>
+    IReadOnlyDictionary<string, SleeperProjection> Projections);

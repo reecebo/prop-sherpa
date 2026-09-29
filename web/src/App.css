@@ -464,8 +464,16 @@ button:disabled { opacity: 0.5; cursor: default; }
  * the rest of the row meaningless. Their widths are fixed rather than content-sized: the second
  * column's offset has to be a constant, and a sticky cell cannot measure the one before it.
  */
-.market-col { width: var(--market-w); }
-.fair-col { width: var(--fair-w); }
+/*
+ * The frozen pair must render at exactly these widths, because `.fair-col`'s sticky offset is the
+ * constant below and a sticky cell cannot measure the column before it. `min-width: 100%` makes
+ * that fragile: when the table is narrower than its panel the surplus is shared across every
+ * column, so Market rendered at 157px against a 148px offset and the Projection column came to
+ * rest 9px short of it - a strip of scrolled content showing through the seam. Pinning min and max
+ * together opts these two out of that distribution and leaves the slack to the book columns.
+ */
+.market-col { width: var(--market-w); min-width: var(--market-w); max-width: var(--market-w); }
+.fair-col { width: var(--fair-w); min-width: var(--fair-w); max-width: var(--fair-w); }
 /* Fixed layout sizes every column from the header row, so the scrolling ones are set too. */
 .pts-col { width: 56px; }
 .book-col { width: 108px; }
@@ -990,11 +998,481 @@ button:disabled { opacity: 0.5; cursor: default; }
   .balance-fill, .balance-marker { transition: none; }
 }
 
+/* ---- Lineup optimizer ------------------------------------------------------------------- */
+
+.league-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.league-label {
+  display: block;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.league-input-row { display: flex; gap: 8px; }
+
+.league-input {
+  width: 260px;
+  max-width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.league-name { margin: 0; font-size: 16px; }
+
+.league-meta { margin: 3px 0 0; font-size: 12px; color: var(--muted); }
+
+/* A quiet text button: changing league is rare, and it should not compete with Refresh. */
+.league-change {
+  margin-top: 6px;
+  padding: 0;
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  text-decoration: underline;
+}
+
+.league-change:hover { color: var(--text); }
+
+.league-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+
+.team-select {
+  min-width: 220px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.league-refresh { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.league-age { font-size: 11px; color: var(--muted); }
+
+/* The player list is 15 MB and rarely the thing that is stale, so it stays visually secondary. */
+.league-secondary {
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+}
+
+.league-secondary:hover:not(:disabled) { color: var(--text); }
+
+.lineup-hint {
+  padding: 12px 14px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.lineup-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 28px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.lineup-total { display: flex; align-items: baseline; gap: 8px; }
+
+.lineup-total-value {
+  font-size: 26px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.lineup-total-label { font-size: 12px; color: var(--muted); }
+
+/* Sleeper's number is context, not our claim, so it reads quieter than ours. */
+.lineup-total-alt .lineup-total-value { font-size: 20px; color: var(--muted); font-weight: 500; }
+
+/* What the changes are worth - the one number on this bar that is a finding. */
+.lineup-total-gain .lineup-total-value { font-size: 20px; color: var(--accent); }
+
+.lineup-caveat { margin: 0 0 0 auto; font-size: 12px; color: var(--muted); }
+
+.lineup-wrap {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+/*
+ * `table-layout: fixed` so the drawer cannot widen the table.
+ *
+ * A `colSpan` cell sizes to its content, and the drawer holds two prop tables that are far wider
+ * than any lineup row. Under auto layout that content sets the table's width, the table outgrows
+ * `.lineup-wrap`, and `overflow: hidden` clips it - the columns get cut off rather than scrolling.
+ * Fixed layout takes its widths from the first row instead, so the drawer has to fit and its own
+ * `.table-wrap` does the scrolling.
+ */
+.lineup { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+
+.lineup thead th {
+  padding: 9px 14px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.lineup tbody td, .lineup tbody th {
+  padding: 10px 14px;
+  text-align: left;
+  font-weight: 400;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.lineup tbody tr:last-child td, .lineup tbody tr:last-child th { border-bottom: none; }
+
+.lineup thead .sleeper-col,
+.lineup thead .proj-col,
+.lineup thead .range-col { text-align: right; }
+
+.sleeper-col, .proj-col, .range-col {
+  text-align: right !important;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Fixed layout takes every width from the first row, so each column states its own. The player
+   column takes whatever is left, and truncates rather than widening the table. */
+.player-col { width: auto; }
+.range-col { color: var(--muted); font-size: 12px; width: 96px; }
+.sleeper-col { color: var(--muted); width: 84px; }
+.proj-col { font-size: 16px; font-weight: 600; width: 84px; }
+.slot-col { width: 64px; }
+.expand-col { width: 44px; text-align: right !important; }
+
+/* Separates the bench from the lineup more firmly than a row border does. */
+.lineup-section th {
+  padding: 7px 14px !important;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+
+/* The bench is reference, not the recommendation - held back so the lineup above stays primary. */
+.lineup-bench .lineup-player { opacity: 0.82; }
+.lineup-bench .lineup-row[data-change] .lineup-player { opacity: 1; }
+.lineup-bench .proj-col { font-size: 14px; }
+
+/*
+ * Slot chips borrow the position palette so the lineup shape is readable at a glance, the way it
+ * is in Sleeper. A FLEX has no single position, so it keeps the neutral surface.
+ */
+.slot-chip {
+  display: inline-block;
+  min-width: 40px;
+  padding: 4px 7px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+/* Tinted by the position actually filling the slot, so the lineup's shape reads at a glance. A
+   FLEX takes the colour of whoever is in it; an empty slot stays neutral. */
+.slot-chip[data-pos='QB'] { background: #2a1e3d; border-color: #5b3fa0; color: #c4a7f5; }
+.slot-chip[data-pos='RB'], .slot-chip[data-pos='FB'] { background: #16303d; border-color: #2b6a86; color: #7dd3fc; }
+.slot-chip[data-pos='WR'] { background: #3a2a14; border-color: #8a6524; color: #fbbf24; }
+.slot-chip[data-pos='TE'] { background: #35203a; border-color: #8a4a92; color: #e879f9; }
+
+.lineup-player { display: flex; align-items: center; gap: 11px; }
+
+.avatar {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+}
+
+.avatar-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.lineup-identity { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+
+.lineup-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  min-width: 0;
+}
+
+/* Under fixed layout the column cannot grow, so a long matchup line clips cleanly instead. */
+.lineup-sub {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lineup-empty, .lineup-none { color: var(--muted); font-style: italic; }
+
+.injury-badge {
+  padding: 1px 5px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--danger);
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: 4px;
+}
+
+/* An unpriced player is missing data, not a bad player - muted, never red. */
+.no-props { font-size: 12px; font-style: italic; color: var(--muted); }
+
+/*
+ * The whole row opens the drawer, so it has to look like it does. The tint is deliberately lighter
+ * than the expanded state - a hint that something will happen, not a claim that it already has.
+ */
+.lineup-row[data-expandable] { cursor: pointer; }
+
+.lineup-row[data-expandable]:hover > * { background: rgba(255, 255, 255, 0.035); }
+.lineup-row[data-expandable]:hover .lineup-expand { color: var(--text); }
+
+.lineup-row[data-expanded] { background: var(--surface-2); }
+
+/*
+ * The two sides of a change from the lineup the manager set. Green and red mean the same thing
+ * here as everywhere else in the app - into the lineup and out of it - and the left edge marks the
+ * row without tinting it so heavily that the numbers become hard to read.
+ *
+ * Red is otherwise reserved for errors. It is right here because a benched starter is genuinely a
+ * loss from the lineup as set, and the pair only reads as one swap if the two rows are opposites.
+ */
+.lineup-row[data-change='in'] { background: var(--win-bg); box-shadow: inset 2px 0 0 var(--accent); }
+.lineup-row[data-change='in'][data-expanded] { background: #15301f; }
+
+.lineup-row[data-change='out'] {
+  background: var(--danger-bg);
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+.lineup-row[data-change='out'][data-expanded] { background: #33181a; }
+
+.change-mark {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+}
+
+.lineup-row[data-change='in'] .change-mark { color: var(--accent); }
+.lineup-row[data-change='out'] .change-mark { color: var(--danger); }
+
+/*
+ * The swap, under the matchup. It sits here rather than in a column because beside the two
+ * projections the number read as the gap between them, when it is the gap against another player
+ * entirely - next to that player's name there is nothing else it can mean.
+ */
+.lineup-change {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: 2px;
+  font-size: 11px;
+  min-width: 0;
+  /* The name gives way before the number does: the points are the part worth keeping. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.change-points { flex-shrink: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+.lineup-row[data-change='in'] .lineup-change { color: var(--accent); opacity: 0.9; }
+.lineup-row[data-change='out'] .lineup-change { color: var(--danger); opacity: 0.9; }
+
+.lineup-expand {
+  padding: 4px;
+  line-height: 0;
+  color: var(--muted);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  transition: transform 150ms ease, color 120ms ease;
+}
+
+.lineup-expand:hover { color: var(--text); }
+.lineup-expand[aria-expanded='true'] { transform: rotate(180deg); }
+
+.lineup-drawer-row > td { padding: 0 !important; background: var(--bg); }
+
+/*
+ * The drawer opens by growing from nothing.
+ *
+ * `grid-template-rows: 0fr -> 1fr` is the trick that makes this animatable: the row cannot be
+ * transitioned from a height of zero to `auto`, but an `fr` track interpolates, and the inner
+ * element's `min-height: 0` lets it be crushed to nothing at the start.
+ *
+ * It is a keyframe rather than a transition because the element mounts already open - React adds
+ * the row only when it is expanded - so there is no prior state for a transition to move from.
+ * Closing is instant for the same reason; animating it out would mean keeping the row mounted
+ * after it is gone, which is more machinery than a table row is worth.
+ */
+.drawer-reveal {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: drawer-open 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Overflow hidden is what clips the content while the track is short of its full height. */
+.drawer-reveal-inner { min-height: 0; overflow: hidden; }
+
+@keyframes drawer-open {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to { grid-template-rows: 1fr; opacity: 1; }
+}
+
+/* The chevron already turns on its own; motion here is decoration, so it goes first. */
+@media (prefers-reduced-motion: reduce) {
+  .drawer-reveal { animation: none; }
+}
+
+.slot-drawer { padding: 16px; }
+
+.slot-compare { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+
+.slot-compare-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+/*
+ * Every eligible player, not a top few. On a FLEX the starters always outrank the bench, so any
+ * cut-off would hide the bench entirely - which is the comparison the page exists to make. The
+ * list is capped by height instead, so a deep roster scrolls rather than being silently truncated.
+ */
+.slot-compare-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 88px;
+  overflow-y: auto;
+}
+
+.slot-compare-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.slot-compare-opt:hover { color: var(--text); }
+
+.slot-compare-opt.active {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--muted);
+}
+
+/* A dashed edge marks a bench option, so the list says which side each player is on. */
+.slot-compare-opt[data-bench] { border-style: dashed; }
+
+.slot-compare-pts { font-variant-numeric: tabular-nums; opacity: 0.7; }
+
+/*
+ * `minmax(0, 1fr)` rather than a bare `1fr`: a grid track sizes to its content by default, so two
+ * wide prop tables push the second column past the drawer's right edge instead of each scrolling
+ * inside its own half. The zero minimum is what lets the track shrink and hand the overflow to
+ * `.table-wrap`.
+ */
+.slot-drawer-split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.slot-drawer-split[data-comparing] { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+/* The same reason one level down - the scrolling element is the table wrapper inside here. */
+.slot-column { min-width: 0; }
+.slot-column .table-wrap { min-width: 0; max-width: 100%; }
+
+.slot-column-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.slot-role {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.slot-column-name { font-size: 14px; font-weight: 600; }
+.slot-column-points { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
 /* Three columns stop fitting well before the app's own breakpoint; stack rather than squeeze. */
 @media (max-width: 900px) {
   .verdict { grid-template-columns: 1fr; justify-items: start; gap: 12px; }
   .verdict .scoring { justify-self: start; }
   .balance { max-width: none; }
+
+  /* Our number and the change are the page; range and Sleeper's number are corroboration and are
+     still reachable in the drawer or on a wider screen. */
+  .lineup .sleeper-col, .lineup .range-col { display: none; }
+  .lineup-summary { gap: 16px; }
+  .lineup-caveat { margin-left: 0; }
 }
 
 /*
@@ -1012,6 +1490,9 @@ button:disabled { opacity: 0.5; cursor: default; }
 @media (max-width: 1100px) {
   /* Content reclaims the gutter, since nothing is parked in it any more. */
   .shell-main { padding-left: 0; }
+
+  /* Two market tables side by side stop fitting where the compare split does. */
+  .slot-drawer-split[data-comparing] { grid-template-columns: 1fr; }
 
   .nav {
     z-index: 40;

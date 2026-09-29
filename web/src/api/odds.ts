@@ -62,6 +62,52 @@ export function formatKickoff(iso: string | null): string {
   });
 }
 
+/**
+ * The short code for a team id, e.g. "MINNESOTA_VIKINGS_NFL" to "MIN".
+ *
+ * Nicknames are not unique enough to derive a code from ("Giants" and "Jets" both sit in New York),
+ * so this is a table. It mirrors NflTeamCodes on the API, which does the same job for matching.
+ */
+const TEAM_CODES: Record<string, string> = {
+  ARIZONA_CARDINALS_NFL: 'ARI',
+  ATLANTA_FALCONS_NFL: 'ATL',
+  BALTIMORE_RAVENS_NFL: 'BAL',
+  BUFFALO_BILLS_NFL: 'BUF',
+  CAROLINA_PANTHERS_NFL: 'CAR',
+  CHICAGO_BEARS_NFL: 'CHI',
+  CINCINNATI_BENGALS_NFL: 'CIN',
+  CLEVELAND_BROWNS_NFL: 'CLE',
+  DALLAS_COWBOYS_NFL: 'DAL',
+  DENVER_BRONCOS_NFL: 'DEN',
+  DETROIT_LIONS_NFL: 'DET',
+  GREEN_BAY_PACKERS_NFL: 'GB',
+  HOUSTON_TEXANS_NFL: 'HOU',
+  INDIANAPOLIS_COLTS_NFL: 'IND',
+  JACKSONVILLE_JAGUARS_NFL: 'JAX',
+  KANSAS_CITY_CHIEFS_NFL: 'KC',
+  LAS_VEGAS_RAIDERS_NFL: 'LV',
+  LOS_ANGELES_CHARGERS_NFL: 'LAC',
+  LOS_ANGELES_RAMS_NFL: 'LAR',
+  MIAMI_DOLPHINS_NFL: 'MIA',
+  MINNESOTA_VIKINGS_NFL: 'MIN',
+  NEW_ENGLAND_PATRIOTS_NFL: 'NE',
+  NEW_ORLEANS_SAINTS_NFL: 'NO',
+  NEW_YORK_GIANTS_NFL: 'NYG',
+  NEW_YORK_JETS_NFL: 'NYJ',
+  PHILADELPHIA_EAGLES_NFL: 'PHI',
+  PITTSBURGH_STEELERS_NFL: 'PIT',
+  SAN_FRANCISCO_49ERS_NFL: 'SF',
+  SEATTLE_SEAHAWKS_NFL: 'SEA',
+  TAMPA_BAY_BUCCANEERS_NFL: 'TB',
+  TENNESSEE_TITANS_NFL: 'TEN',
+  WASHINGTON_COMMANDERS_NFL: 'WAS',
+};
+
+export function teamCode(teamId: string | null): string {
+  if (!teamId) return '';
+  return TEAM_CODES[teamId] ?? teamId.replace(/_NFL$/, '');
+}
+
 /** Team ids arrive as "MINNESOTA_VIKINGS_NFL"; show the readable tail. */
 export function formatTeam(teamId: string): string {
   return teamId

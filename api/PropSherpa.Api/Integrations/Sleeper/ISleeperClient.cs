@@ -15,4 +15,13 @@ public interface ISleeperClient
     /// call a day, so only <see cref="SleeperPlayerDirectory"/> should call this.
     /// </summary>
     Task<IReadOnlyDictionary<string, SleeperPlayer>> GetPlayersAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Sleeper's own weekly projections, keyed by player id. Their vendor's numbers, kept beside
+    /// ours so the two can be compared rather than blended.
+    /// </summary>
+    Task<IReadOnlyDictionary<string, SleeperProjection>> GetProjectionsAsync(
+        string season,
+        int week,
+        CancellationToken ct = default);
 }
